@@ -37,8 +37,8 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // Load listings data from API
-function loadListingsData() {
-    let url = `/api/listings?page=${page}&perPage=${perPage}`; // API URL
+function loadListingsData(page = 1, perPage = 10, searchName = '') {
+    let url = `https://your-api-url/api/listings?page=${page}&perPage=${perPage}`; // API URL
     if (searchName) url += `&name=${searchName}`; // Add search if present
 
     console.log('Fetching data from:', url); // Debugging line
@@ -77,6 +77,7 @@ function loadListingsData() {
         })
         .catch(err => console.error('Fetch error:', err)); // Error handling
 }
+
 
 // Add click events to view details buttons
 function addCardClickEvents() {
