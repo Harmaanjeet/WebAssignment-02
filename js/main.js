@@ -1,111 +1,119 @@
-let page = 1; // Current page
-const perPage = 15; // Listings per page
-let searchName = null; // Current search term
+const searchInput = document.getElementById("searchInput");
+const clearButton = document.getElementById("clearButton");
+const noResultsMessage = document.getElementById("noResults");
+const listingCards = document.getElementById("listingCards");
+const aboutSection = document.getElementById("about");
+const aboutLink = document.getElementById("aboutLink");
+const closeAboutButton = document.getElementById("closeAboutButton");
 
-document.addEventListener("DOMContentLoaded", () => {
-    loadListingsData(); // Initial load
+let listings = []; // Array to hold listing data
+let searchName = ""; // Search input
+let currentPage = 1; // Current page for pagination
+const listingsPerPage = 3; // Number of listings to show per page
 
-    // Search form submit event
-    document.getElementById('searchForm').addEventListener('submit', (e) => {
-        e.preventDefault();
-        searchName = document.getElementById('name').value.trim(); // Get search term
-        page = 1; // Reset to first page
-        loadListingsData(); // Load data
-    });
+// Fetch listings data
+async function fetchListings() {
+    try {
+        // Replace this URL with your actual data source if needed
+        const response = await fetch('https://web-422-assignment-01-4pgt-6o7ou11kw-harmaanjeets-projects.vercel.app/api/listings?vercelToolbarCode=3dY_Vi4kCOFWLIF'); // Update with your URL
+        listings = await response.json(); // Get JSON data from the response
+        loadListingsData();
+    } catch (error) {
+        console.error("Error fetching listings:", error);
+    }
+}
 
-    // Clear button event
-    document.getElementById('clearForm').addEventListener('click', () => {
-        searchName = null; // Clear search
-        document.getElementById('name').value = ''; // Reset input
-        page = 1; // Reset to first page
-        loadListingsData(); // Load data
-    });
+// Load listings data and filter based on search input
+function loadListingsData() {
+    const filteredListings = listings.filter(listing =>
+        listing.name.toLowerCase().includes(searchName.toLowerCase())
+    );
 
-    // Pagination - Previous page
-    document.getElementById('previous-page').addEventListener('click', () => {
-        if (page > 1) {
-            page--; // Decrease page number
-            loadListingsData(); // Load data
-        }
-    });
+    // Pagination logic
+    const totalPages = Math.ceil(filteredListings.length / listingsPerPage);
+    const startIndex = (currentPage - 1) * listingsPerPage;
+    const paginatedListings = filteredListings.slice(startIndex, startIndex + listingsPerPage);
 
-    // Pagination - Next page
-    document.getElementById('next-page').addEventListener('click', () => {
-        page++; // Increase page number
-        loadListingsData(); // Load data
-    });
+    // Clear existing cards
+    listingCards.innerHTML = '';
+
+    // Display listings or no results
+    if (paginatedListings.length === 0) {
+        noResultsMessage.style.display = 'block';
+    } else {
+        noResultsMessage.style.display = 'none';
+        paginatedListings.forEach(listing => {
+            const col = document.createElement('div');
+            col.className = 'col-md-4';
+            col.innerHTML = `
+                <div class="card">
+                    <img src="${listing.image || 'https://via.placeholder.com/300x200'}" class="card-img-top" alt="${listing.name}">
+                    <div class="card-body">
+                        <h5 class="card-title">${listing.name}</h5>
+                        <p class="card-text">${listing.summary}</p>
+                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#listingModal" onclick="showDetails('${listing.name}', '${listing.description}', '${listing.image || 'https://via.placeholder.com/300x200'}')">View Listing</button>
+                    </div>
+                </div>
+            `;
+            listingCards.appendChild(col);
+        });
+    }
+
+    updatePagination(totalPages);
+}
+
+// Update pagination based on current page and total pages
+function updatePagination(totalPages) {
+    const paginationElement = document.querySelector('.pagination');
+    paginationElement.innerHTML = ''; // Clear existing pagination
+
+    for (let i = 1; i <= totalPages; i++) {
+        const pageItem = document.createElement('li');
+        pageItem.className = `page-item ${i === currentPage ? 'active' : ''}`;
+        pageItem.innerHTML = `<a class="page-link" href="#">${i}</a>`;
+
+        pageItem.addEventListener('click', (e) => {
+            e.preventDefault();
+            currentPage = i; // Set current page
+            loadListingsData(); // Load new data
+        });
+
+        paginationElement.appendChild(pageItem);
+    }
+}
+
+// Show details in modal
+function showDetails(title, description, image) {
+    document.getElementById("listingTitle").textContent = title;
+    document.getElementById("listingDescription").textContent = description;
+    document.getElementById("listingImage").src = image;
+}
+
+// Search event listener
+searchInput.addEventListener("input", () => {
+    searchName = searchInput.value; // Update search term
+    currentPage = 1; // Reset to first page
+    loadListingsData(); // Load filtered data
 });
 
-// Load listings data from API
-function loadListingsData(page = 1, perPage = 10, searchName = '') {
-    let url = `https://your-api-url/api/listings?page=${page}&perPage=${perPage}`; // API URL
-    if (searchName) url += `&name=${searchName}`; // Add search if present
+// Clear button event listener
+clearButton.addEventListener("click", () => {
+    searchInput.value = ''; // Clear input
+    searchName = ''; // Reset search term
+    currentPage = 1; // Reset to first page
+    loadListingsData(); // Load all data
+});
 
-    console.log('Fetching data from:', url); // Debugging line
-    fetch(url)
-        .then(res => res.ok ? res.json() : Promise.reject(res.status))
-        .then(data => {
-            console.log('Received data:', data); // Debugging line
-            const container = document.querySelector('.row'); // Adjust based on your structure
-            container.innerHTML = ''; // Clear previous cards
-            if (data.length) {
-                // Create cards using map
-                const cards = data.map(item => {
-                    const reviewsRating = item.review_scores ? item.review_scores.review_scores_rating : 'N/A';
-                    const summary = item.summary ? item.summary : 'No summary available';
+// About link toggle
+aboutLink.addEventListener("click", (e) => {
+    e.preventDefault();
+    aboutSection.style.display = aboutSection.style.display === 'none' ? 'block' : 'none';
+});
 
-                    return `
-                        <div class="col-12 col-md-6 col-lg-4">
-                            <div class="card">
-                                <img src="${item.images.picture_url || 'https://placehold.co/600x400?text=Photo+Not+Available'}" class="card-img-top" alt="${item.name}">
-                                <div class="card-body">
-                                    <h5 class="card-title">${item.name}</h5>
-                                    <p class="card-text">${summary}</p>
-                                    <p><strong>Rating:</strong> ${reviewsRating}</p>
-                                    <a href="#" class="btn btn-primary" data-id="${item._id}">View Details</a>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                }).join(''); // Join array into a string
+// Close about section
+closeAboutButton.addEventListener("click", () => {
+    aboutSection.style.display = 'none';
+});
 
-                container.innerHTML = cards; // Insert cards into container
-                addCardClickEvents(); // Attach click events to the buttons
-            } else {
-                container.innerHTML = '<div class="col"><strong>No data available</strong></div>'; // Handle no data
-            }
-        })
-        .catch(err => console.error('Fetch error:', err)); // Error handling
-}
-
-
-// Add click events to view details buttons
-function addCardClickEvents() {
-    document.querySelectorAll('.btn.btn-primary[data-id]').forEach(button => {
-        button.addEventListener('click', (e) => {
-            const id = button.getAttribute('data-id'); // Get data-id
-            fetch(`/api/listings/${id}`) // Fetch listing details
-                .then(res => res.json())
-                .then(data => {
-                    // Update modal title and body
-                    document.querySelector('#detailsModalLabel').textContent = data.name;
-                    document.querySelector('.modal-body').innerHTML = `
-                        <img id="photo" onerror="this.onerror=null;this.src='https://placehold.co/600x400?text=Photo+Not+Available'" class="img-fluid w-100" src="${data.images.picture_url}">
-                        <br/><br/>
-                        ${data.neighborhood_overview || 'No neighborhood overview available.'}
-                        <br/><br/>
-                        <strong>Price:</strong> ${data.price.toFixed(2)}<br/>
-                        <strong>Room:</strong> ${data.room_type}<br/>
-                        <strong>Bed:</strong> ${data.bed_type}<br/>
-                        <strong>Bedrooms:</strong> ${data.beds || 0}<br/><br/>
-                    `;
-                    new bootstrap.Modal(document.getElementById('detailsModal')).show(); // Show modal
-                });
-        });
-    });
-}
-
-// Pagination and current page logic (if needed)
-function updateCurrentPage() {
-    document.getElementById('current-page').textContent = page; // Update current page number
-}
+// Fetch data on load
+fetchListings();
